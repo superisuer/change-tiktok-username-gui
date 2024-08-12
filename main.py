@@ -8,6 +8,7 @@ from time import time
 from hashlib import md5
 from copy import deepcopy
 from random import choice
+import webbrowser
 
 
 def file_data(path):
@@ -300,6 +301,17 @@ def change_username_us(session_id, device_id, iid, last_username, new_username):
     else:
         return "Failed to change username: " + str(result)
 
+
+
+
+
+# ну и нахуя ты тут
+
+
+
+
+
+
 def mains():
     """Main function to handle user interaction and username change."""
     device_id = str(random.randint(777777788, 999999999999))
@@ -307,6 +319,7 @@ def mains():
     session_id = entrys.get()
     try:
         user = get_profile(session_id, device_id, iid)
+        print(get_profile(session_id, device_id, iid))
         if user != "None":
             print(f"Your current TikTok username is: {user}")
             new_username = entryn.get()
@@ -331,15 +344,39 @@ def change_nickname():
     result = askyesno(title="Подтвержение операции", message="Вы больше НЕ сможете сменить ник на прежний.\nВозможно, вы больше не сможете входить по номеру телефону в аккаунт.\n\nПодтвердить операцию?")
     if result:
         showinfo("Результат", mains())
-
-ttk.Label(text="session_id").pack(anchor=N)
+def openurl():
+    webbrowser.open('https://t.me/superifiles')
+def getmegainfo():
+    device_id = str(random.randint(777777788, 999999999999))
+    iid = str(random.randint(777777788, 999999999999))
+    session_id = entrys.get()
+    try:
+        user = get_profile(session_id, device_id, iid)
+        print(get_profile(session_id, device_id, iid))
+        if user != "None":
+            userinfo["text"] = f"@{user}"
+        else:
+            user_us = get_profile_us(session_id, device_id, iid)
+            if user_us != "None":
+                userinfo["text"] = f"@{user_us}"
+            else:
+                return "Неверный ID сессии или другая ошибка."
+    except Exception as e:
+        return e
+ttk.Label(text="Введите sessionid").pack(anchor=N)
 entrys = ttk.Entry()
 entrys.pack(anchor=NW, padx=6, pady=0,fill=X)
+btn_getinfo = ttk.Button(text="Проверить аккаунт", command=getmegainfo)
+btn_getinfo.pack(anchor=N,pady=2,fill=X,padx=6)
 ttk.Label(text="Предпочитаемый никнейм (свободный)").pack(anchor=N)
 entryn = ttk.Entry()
 entryn.pack(anchor=NW, padx=6, pady=0,fill=X)
 btn = ttk.Button(text="Сменить", command=change_nickname)
 btn.pack(expand=True)
-ttk.Label(text="Подпишись на мой тгк @superifiles").pack(anchor=SW)
-ttk.Label(text="ну пж(").pack(anchor=SW)
+userinfo = ttk.Label(text="", font="Arial 10")
+userinfo.pack(anchor="center")
+ttk.Label(text="Подпишись на мой тгк @superifiles", font="Arial 16").pack(anchor=SW)
+ttk.Label(text="ну пж(", font="Arial 13").pack(anchor=SW)
+ttk.Button(text="Перейти в канал", command=openurl).pack(anchor=SW,fill=X)
+
 root.mainloop()
