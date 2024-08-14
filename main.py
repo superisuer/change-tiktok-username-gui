@@ -1,63 +1,67 @@
 from tkinter import *
 from tkinter import ttk
 from tkinter.messagebox import showerror, showwarning, showinfo, askyesno
-# coding:utf-8
+import customtkinter
 import hashlib
 import json
 from time import time
 from hashlib import md5
 from copy import deepcopy
 from random import choice
+import requests
+import hashlib
+import random
+from urllib.parse import quote
 import webbrowser
 
-
-def file_data(path):
-    with open(path, "rb") as f:
-        result = f.read()
-    return result
+# coding:utf-8
+import binascii
+import hashlib
+import json
+from time import time
+from hashlib import md5
+from copy import deepcopy
+from random import choice
 
 
 def hex_string(num):
     tmp_string = hex(num)[2:]
     if len(tmp_string) < 2:
-        tmp_string = "0" + tmp_string
+        tmp_string = '0' + tmp_string
     return tmp_string
+
+
+def RBIT(num):
+    result = ''
+    tmp_string = bin(num)[2:]
+    while len(tmp_string) < 8:
+        tmp_string = '0' + tmp_string
+    for i in range(0, 8):
+        result = result + tmp_string[7 - i]
+    return int(result, 2)
+
+
+def file_data(path):
+    with open(path, 'rb') as f:
+        result = f.read()
+    return result
 
 
 def reverse(num):
     tmp_string = hex(num)[2:]
     if len(tmp_string) < 2:
-        tmp_string = "0" + tmp_string
+        tmp_string = '0' + tmp_string
     return int(tmp_string[1:] + tmp_string[:1], 16)
-
-
-def RBIT(num):
-    result = ""
-    tmp_string = bin(num)[2:]
-    while len(tmp_string) < 8:
-        tmp_string = "0" + tmp_string
-    for i in range(0, 8):
-        result = result + tmp_string[7 - i]
-    return int(result, 2)
 
 
 class XG:
     def __init__(self, debug):
         self.length = 0x14
         self.debug = debug
-        self.hex_CE0 = [
-            0x05,
-            0x00,
-            0x50,
-            choice(range(0, 0xFF)),
-            0x47,
-            0x1E,
-            0x00,
-            8 * choice(range(0, 0x1F)),
-        ]
+        self.hex_CE0 = [0x05, 0x00, 0x50, choice(range(0, 0xFF)), 0x47, 0x1e, 0x00, choice(range(0, 0xFF)) & 0xf0]
 
     def addr_BA8(self):
-        tmp = ""
+        tmp = ''
         hex_BA8 = []
         for i in range(0x0, 0x100):
             hex_BA8.append(i)
@@ -79,7 +83,7 @@ class XG:
             if C < i:
                 tmp = C
             else:
-                tmp = ""
+                tmp = ''
             D = hex_BA8[C]
             hex_BA8[i] = D
         return hex_BA8
@@ -123,49 +127,68 @@ class XG:
         return debug
 
     def main(self):
-        result = ""
+        result = ''
         for item in self.calculate(self.initial(self.debug, self.addr_BA8())):
             result = result + hex_string(item)
 
-        return "8402{}{}{}{}{}".format(
-            hex_string(self.hex_CE0[7]),
-            hex_string(self.hex_CE0[3]),
-            hex_string(self.hex_CE0[1]),
-            hex_string(self.hex_CE0[6]),
-            result,
-        )
+        return '8404{}{}{}{}{}'.format(hex_string(self.hex_CE0[7]), hex_string(self.hex_CE0[3]),
+                                       hex_string(self.hex_CE0[1]), hex_string(self.hex_CE0[6]), result)
 
 
-def getxg(param="", stub="", cookie=""):
+def X_Gorgon(param, data, cookie):
     gorgon = []
     ttime = time()
-
-    url_md5 = md5(bytearray(param, "utf-8")).hexdigest()
-    for i in range(0, 4):
-        gorgon.append(int(url_md5[2 * i : 2 * i + 2], 16))
-
-    if stub:
-        for i in range(0, 4):
-            gorgon.append(int(stub[2 * i : 2 * i + 2], 16))
-    else:
-        for i in range(0, 4):
-            gorgon.append(0x0)
-
-    if cookie:
-        cookie_md5 = md5(bytearray(cookie, "utf-8")).hexdigest()
-        for i in range(0, 4):
-            gorgon.append(int(cookie_md5[2 * i : 2 * i + 2], 16))
-    else:
-        for i in range(0, 4):
-            gorgon.append(0x0)
-
-    gorgon = gorgon + [0x0, 0x8, 0x10, 0x9]
-
     Khronos = hex(int(ttime))[2:]
+    url_md5 = md5(bytearray(param, 'utf-8')).hexdigest()
     for i in range(0, 4):
-        gorgon.append(int(Khronos[2 * i : 2 * i + 2], 16))
+        gorgon.append(int(url_md5[2 * i: 2 * i + 2], 16))
+    if data:
+        if isinstance(data, str):
+            data = data.encode(encoding='utf-8')
+        data_md5 = md5(data).hexdigest()
+        for i in range(0, 4):
+            gorgon.append(int(data_md5[2 * i: 2 * i + 2], 16))
+    else:
+        for i in range(0, 4):
+            gorgon.append(0x0)
+    if cookie:
+        cookie_md5 = md5(bytearray(cookie, 'utf-8')).hexdigest()
+        for i in range(0, 4):
+            gorgon.append(int(cookie_md5[2 * i: 2 * i + 2], 16))
+    else:
+        for i in range(0, 4):
+            gorgon.append(0x0)
+    gorgon = gorgon + [0x1, 0x1, 0x2, 0x4]
+    for i in range(0, 4):
+        gorgon.append(int(Khronos[2 * i: 2 * i + 2], 16))
+    return {'X-Gorgon': XG(gorgon).main(), 'X-Khronos': str(int(ttime))}
 
-    return {"X-Gorgon": XG(gorgon).main(), "X-Khronos": str(int(ttime))}
+
+def run(param="", stub="", cookie=""):
+    gorgon = []
+    ttime = time()
+    Khronos = hex(int(ttime))[2:]
+    url_md5 = md5(bytearray(param, 'utf-8')).hexdigest()
+    for i in range(0, 4):
+        gorgon.append(int(url_md5[2 * i: 2 * i + 2], 16))
+    if stub:
+        data_md5 = stub
+        for i in range(0, 4):
+            gorgon.append(int(data_md5[2 * i: 2 * i + 2], 16))
+    else:
+        for i in range(0, 4):
+            gorgon.append(0x0)
+    if cookie:
+        cookie_md5 = md5(bytearray(cookie, 'utf-8')).hexdigest()
+        for i in range(0, 4):
+            gorgon.append(int(cookie_md5[2 * i: 2 * i + 2], 16))
+    else:
+        for i in range(0, 4):
+            gorgon.append(0x0)
+    gorgon = gorgon + [0x1, 0x1, 0x2, 0x4]
+    for i in range(0, 4):
+        gorgon.append(int(Khronos[2 * i: 2 * i + 2], 16))
+    return {'X-Gorgon': XG(gorgon).main(), 'X-Khronos': str(int(ttime))}
 
 
 def get_stub(data):
@@ -173,7 +196,7 @@ def get_stub(data):
         data = json.dumps(data)
 
     if isinstance(data, str):
-        data = data.encode(encoding="utf-8")
+        data = data.encode(encoding='utf-8')
     if data == None or data == "" or len(data) == 0:
         return "00000000000000000000000000000000"
 
@@ -184,199 +207,106 @@ def get_stub(data):
     return res
 
 
-import requests
-import hashlib
-import random
-from urllib.parse import quote
-
-def getxg_m(param, data):
-    """Generate X-Gorgon and X-Khronos headers based on parameters."""
-    return getxg(param, hashlib.md5(data.encode()).hexdigest() if data else None, None)
-
 def get_profile(session_id, device_id, iid):
     """Retrieve the current TikTok username for a given session, device, and iid."""
     try:
-        data = None
-        parm = (f"device_id={device_id}&iid={iid}&id=kaa&version_code=34.0.0&language=en"
-                "&app_name=lite&app_version=34.0.0&carrier_region=SA&tz_offset=10800&mcc_mnc=42001"
-                "&locale=en&sys_region=SA&aid=473824&screen_width=1284&os_api=18&ac=WIFI&os_version=17.3"
-                "&app_language=en&tz_name=Asia/Riyadh&carrier_region1=SA&build_number=340002&device_platform=iphone"
-                "&device_type=iPhone13,4")
-        sig = getxg_m(parm, data)
-        url = f"https://api16.tiktokv.com/aweme/v1/user/profile/self/?{parm}"
+        
+        url = f"https://api.tiktokv.com/passport/account/info/v2/?id=kaa&version_code=34.0.0&language=en&app_name=lite&app_version=34.0.0&carrier_region=SA&device_id=7256623439258404357&tz_offset=10800&mcc_mnc=42001&locale=en&sys_region=SA&aid=473824&screen_width=1284&os_api=18&ac=WIFI&os_version=17.3&app_language=en&tz_name=Asia/Riyadh&carrier_region1=SA&build_number=340002&device_platform=iphone&iid=7353686754157692689&device_type=iPhone13,4"
         headers = {
             "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
             "Cookie": f"sessionid={session_id}",
             "sdk-version": "2",
             "user-agent": "com.zhiliaoapp.musically/432424234 (Linux; U; Android 5; en; fewfwdw; Build/PI;tt-ok/3.12.13.1)",
-            "X-Gorgon": sig["X-Gorgon"],
-            "X-Khronos": sig["X-Khronos"],
+  
         }
+        
         response = requests.get(url, headers=headers, cookies={"sessionid": session_id})
-        return response.json()["user"]["unique_id"]
+        return response.json()["data"]["username"]
     except Exception as e:
         return "None"
 
-def get_profile_us(session_id, device_id, iid):
-    """Retrieve the current TikTok username for a given session, device, and iid (US version)."""
-    try:
-        data = None
-        parm = (f"device_id={device_id}&iid={iid}&id=kaa&version_code=34.0.0&language=en"
-                "&app_name=lite&app_version=34.0.0&carrier_region=SA&tz_offset=10800&mcc_mnc=42001"
-                "&locale=en&sys_region=SA&aid=473824&screen_width=1284&os_api=18&ac=WIFI&os_version=17.3"
-                "&app_language=en&tz_name=Asia/Riyadh&carrier_region1=SA&build_number=340002&device_platform=iphone"
-                "&device_type=iPhone13,4")
-        sig = getxg_m(parm, data)
-        url = f"https://api16-normal-quic-useast2a.tiktokv.com/aweme/v1/user/profile/self/?{parm}"
-        headers = {
-            "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-            "Cookie": f"sessionid={session_id}",
-            "sdk-version": "2",
-            "user-agent": "com.zhiliaoapp.musically/432424234 (Linux; U; Android 5; en; fewfwdw; Build/PI;tt-ok/3.12.13.1)",
-            "X-Gorgon": sig["X-Gorgon"],
-            "X-Khronos": sig["X-Khronos"],
-        }
-        response = requests.get(url, headers=headers, cookies={"sessionid": session_id})
-        return response.json()["user"]["unique_id"]
-    except Exception as e:
-        return "None"
 
 def check_is_changed(last_username, session_id, device_id, iid):
     """Check if the username has been changed in the TikTok profile."""
     return get_profile(session_id, device_id, iid) != last_username
 
-def check_is_changed_us(last_username, session_id, device_id, iid):
-    """Check if the username has been changed in the TikTok profile (US version)."""
-    return get_profile_us(session_id, device_id, iid) != last_username
 
 def change_username(session_id, device_id, iid, last_username, new_username):
     """Attempt to change a TikTok username."""
-    data = f"unique_id={quote(new_username)}"
-    parm = (f"device_id={device_id}&iid={iid}&residence=SA&version_name=1.1.0&os_version=17.4.1"
-            "&app_name=tiktok_snail&locale=en&ac=4G&sys_region=SA&version_code=1.1.0&channel=App%20Store"
-            "&op_region=SA&os_api=18&device_brand=iphone&idfv={iid}-1ED5-4350-9318-77A1469C0B89"
-            "&device_platform=iphone&device_type=iPhone13,4&carrier_region1=&tz_name=Asia/Riyadh"
-            "&account_region=eg&build_number=11005&tz_offset=10800&app_language=en&carrier_region="
-            "&current_region=&aid=364225&mcc_mnc=&screen_width=1284&uoo=1&content_language=&language=en"
-            "&cdid={iid}&openudid={iid}&app_version=1.1.0&scene_id=830")
-    sig = getxg_m(parm, data)
-    url = f"https://api16.tiktokv.com/aweme/v1/commit/user/?{parm}"
+    data = f"aid=364225&unique_id={quote(new_username)}"
+    parm = f"aid=364225&residence=&device_id={device_id}&version_name=1.1.0&os_version=17.4.1&iid={iid}&app_name=tiktok_snail&locale=en&ac=4G&sys_region=SA&version_code=1.1.0&channel=App%20Store&op_region=SA&os_api=18&device_brand=iPad&idfv=16045E07-1ED5-4350-9318-77A1469C0B89&device_platform=iPad&device_type=iPad13,4&carrier_region1=&tz_name=Asia/Riyadh&account_region=sa&build_number=11005&tz_offset=10800&app_language=en&carrier_region=&current_region=&aid=364225&mcc_mnc=&screen_width=1284&uoo=1&content_language=&language=en&cdid=B75649A607DA449D8FF2ADE97E0BC3F1&openudid=7b053588b18d61b89c891592139b68d918b44933&app_version=1.1.0"
+    
+        
+    sig = run(parm, md5(data.encode("utf-8")).hexdigest() if data else None,None)  
+    url = f"https://api.tiktokv.com/aweme/v1/commit/user/?{parm}"
     headers = {
-        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "Connection": "keep-alive",
+        "User-Agent": "Whee 1.1.0 rv:11005 (iPad; iOS 17.4.1; en_SA@calendar=gregorian) Cronet",
+
+
         "Cookie": f"sessionid={session_id}",
-        "sdk-version": "2",
-        "user-agent": "com.zhiliaoapp.musically/{device_id} (Linux; U; Android 5; en; {iid}; Build/PI;tt-ok/3.12.13.1)",
-        "X-Gorgon": sig["X-Gorgon"],
-        "X-Khronos": sig["X-Khronos"],
     }
+    headers.update(sig)
     response = requests.post(url, data=data, headers=headers)
     result = response.text
-    if "unique_id" in result and check_is_changed(last_username, session_id, device_id, iid):
-        return "Username change successful."
+    if "unique_id" in result :
+        if(check_is_changed(last_username, session_id, device_id, iid)):
+            showinfo("Результат", "Успешно.")
+        else:
+            return showerror("Результат", f"Не удалось изменить: {str(result)}")
     else:
-        return "Failed to change username: " + str(result)
-
-def change_username_us(session_id, device_id, iid, last_username, new_username):
-    """Attempt to change a TikTok username (US version)."""
-    data = f"unique_id={quote(new_username)}&device_id={device_id}"
-    parm = (f"aid=364225&sdk_version=1012000&refresh_num=11&version_code=30.0.0&language=en-SA"
-            "&display_density=1284*2778&device_id=12345678910&channel=AppStore&click_banner=32&mcc_mnc=42001"
-            "&show_limit=0&resolution=1284*2778&aid=1233&version_name=9.1.1&os=ios&update_version_code=91115"
-            "&access=WIFI&carrier=stc&ac=WIFI&os_version=17.3&is_cold_start=0&reason=0&device_platform=iphone"
-            "&device_brand=AppleInc.&device_type=iPhone13,4")
-    sig = getxg_m(parm, data)
-    url = f"https://api16-normal-quic-useast2a.tiktokv.com/aweme/v1/commit/user/?{parm}"
-    headers = {
-        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-        "Cookie": f"sessionid={session_id}",
-        "sdk-version": "2",
-        "user-agent": "com.zhiliaoapp.musically/{device_id} (Linux; U; Android 5; en; {iid}; Build/PI;tt-ok/3.12.13.1)",
-        "X-Gorgon": sig["X-Gorgon"],
-        "X-Khronos": sig["X-Khronos"],
-    }
-    response = requests.post(url, data=data, headers=headers)
-    result = response.text
-    if "unique_id" in result and check_is_changed_us(last_username, session_id, device_id, iid):
-        return "Username change successful."
-    else:
-        return "Failed to change username: " + str(result)
-
-
-
-
-
-# ну и нахуя ты тут
-
-
-
-
+        return showerror("Результат", f"Не удалось изменить: {str(result)}")
 
 
 def mains():
     """Main function to handle user interaction and username change."""
     device_id = str(random.randint(777777788, 999999999999))
     iid = str(random.randint(777777788, 999999999999))
-    session_id = entrys.get()
-    try:
-        user = get_profile(session_id, device_id, iid)
-        print(get_profile(session_id, device_id, iid))
-        if user != "None":
-            print(f"Your current TikTok username is: {user}")
-            new_username = entryn.get()
-            print(change_username(session_id, device_id, iid, user, new_username))
-        else:
-            user_us = get_profile_us(session_id, device_id, iid)
-            if user_us != "None":
-                print(f"Your current TikTok username is: {user_us}")
-                new_username = str(entryn.get())
-                print(change_username_us(str(session_id), device_id, iid, user_us, str(new_username)))
-            else:
-                return "Неверный ID сессии или другая ошибка."
-    except Exception as e:
-        return e
-    return "мб успешно, мб нет"
 
-root = Tk()
+    session_id = entrys.get()
+
+    last_username = get_profile(session_id, device_id, iid)
+    if last_username != "None": #ء 
+        print(f"Ваш никнейм: {last_username}")
+        new_username = entryn.get()
+        print(change_username(session_id, device_id, iid,last_username, new_username))
+    else:
+        return showerror("Результат", f"Неверный ID сессии или другая ошибка.")
+    print("telegram @harbi\ntelegram @superisuer")
+
+root = customtkinter.CTk()
 root.title("Смена никнейма")
 root.geometry("350x300")
 
 def change_nickname(): 
     result = askyesno(title="Подтвержение операции", message="Вы больше НЕ сможете сменить ник на прежний.\nВозможно, вы больше не сможете входить по номеру телефону в аккаунт.\n\nПодтвердить операцию?")
     if result:
-        showinfo("Результат", mains())
+        mains()
 def openurl():
     webbrowser.open('https://t.me/superifiles')
 def getmegainfo():
     device_id = str(random.randint(777777788, 999999999999))
     iid = str(random.randint(777777788, 999999999999))
+
     session_id = entrys.get()
-    try:
-        user = get_profile(session_id, device_id, iid)
-        print(get_profile(session_id, device_id, iid))
-        if user != "None":
-            userinfo["text"] = f"@{user}"
-        else:
-            user_us = get_profile_us(session_id, device_id, iid)
-            if user_us != "None":
-                userinfo["text"] = f"@{user_us}"
-            else:
-                return "Неверный ID сессии или другая ошибка."
-    except Exception as e:
-        return e
-ttk.Label(text="Введите sessionid").pack(anchor=N)
-entrys = ttk.Entry()
-entrys.pack(anchor=NW, padx=6, pady=0,fill=X)
-btn_getinfo = ttk.Button(text="Проверить аккаунт", command=getmegainfo)
-btn_getinfo.pack(anchor=N,pady=2,fill=X,padx=6)
-ttk.Label(text="Предпочитаемый никнейм (свободный)").pack(anchor=N)
-entryn = ttk.Entry()
-entryn.pack(anchor=NW, padx=6, pady=0,fill=X)
-btn = ttk.Button(text="Сменить", command=change_nickname)
+
+    userinfo["text"] = get_profile(session_id, device_id, iid)
+
+padx_default = 15
+root.resizable(False, False)
+
+customtkinter.CTkLabel(master=root,text="Введите sessionid").pack(anchor=NW, padx=padx_default)
+entrys = customtkinter.CTkEntry(master=root)
+entrys.pack(anchor=NW, padx=padx_default, pady=0,fill=X)
+btn_getinfo = customtkinter.CTkButton(master=root,text="Проверить аккаунт", command=getmegainfo)
+btn_getinfo.pack(anchor=NW,pady=2,fill=X,padx=padx_default)
+customtkinter.CTkLabel(master=root,text="Предпочитаемый никнейм (свободный)").pack(anchor=NW, padx=padx_default)
+entryn = customtkinter.CTkEntry(master=root)
+entryn.pack(anchor=NW, padx=padx_default, pady=0,fill=X)
+btn = customtkinter.CTkButton(master=root,text="Сменить", command=change_nickname)
 btn.pack(expand=True)
-userinfo = ttk.Label(text="", font="Arial 10")
+userinfo = customtkinter.CTkLabel(root,text="")
 userinfo.pack(anchor="center")
-ttk.Label(text="Подпишись на мой тгк @superifiles", font="Arial 16").pack(anchor=SW)
-ttk.Label(text="ну пж(", font="Arial 13").pack(anchor=SW)
-ttk.Button(text="Перейти в канал", command=openurl).pack(anchor=SW,fill=X)
+customtkinter.CTkButton(root,text="Перейти в канал @superifiles", command=openurl).pack(anchor=SW,fill=X,padx=padx_default,pady=15)
 
 root.mainloop()
