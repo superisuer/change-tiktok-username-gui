@@ -1,5 +1,5 @@
 ## Как выглядит
-![preview](preview.jpg)
+![preview](preview.png)
 
 ## Получение и вставка `sessionid`
 1. Установите дополнения к браузеру.
