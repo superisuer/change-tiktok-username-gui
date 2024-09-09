@@ -211,7 +211,7 @@ def get_profile(session_id, device_id, iid):
     """Retrieve the current TikTok username for a given session, device, and iid."""
     try:
         
-        url = f"https://api.tiktokv.com/passport/account/info/v2/?id=kaa&version_code=34.0.0&language=en&app_name=lite&app_version=34.0.0&carrier_region=SA&device_id=7256623439258404357&tz_offset=10800&mcc_mnc=42001&locale=en&sys_region=SA&aid=473824&screen_width=1284&os_api=18&ac=WIFI&os_version=17.3&app_language=en&tz_name=Asia/Riyadh&carrier_region1=SA&build_number=340002&device_platform=iphone&iid=7353686754157692689&device_type=iPhone13,4"
+        url = f"https://api.tiktokv.com/passport/account/info/v2/?id=kaa&version_code=35.8.3&language=en&app_name=lite&app_version=35.8.3&carrier_region=SA&device_id=7256623439258404357&tz_offset=10800&mcc_mnc=42001&locale=en&sys_region=SA&aid=473824&screen_width=1284&os_api=18&ac=WIFI&os_version=17.3&app_language=en&tz_name=Asia/Riyadh&carrier_region1=SA&build_number=340002&device_platform=iphone&iid=7353686754157692689&device_type=iPhone13,4"
         headers = {
             "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
             "Cookie": f"sessionid={session_id}",
